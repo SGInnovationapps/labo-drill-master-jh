@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>オフライン｜ラボドリ オンライン</title>
+<link rel="icon" href="favicon.ico">
+<style>
+body{margin:0; min-height:100dvh; display:flex; align-items:center; justify-content:center;
+  background:#FBFAF6; color:#2B2620; font-family:"Noto Sans JP","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  text-align:center; padding:24px}
+.box{max-width:340px}
+img{width:96px; height:96px; border-radius:12px; border:1px solid #E6E0D4}
+h1{font-size:19px; font-weight:700; margin:18px 0 8px}
+p{font-size:14px; line-height:1.8; color:#6B6257; margin:0 0 20px}
+button{border:none; background:#1D9E75; color:#fff; font:inherit; font-weight:700;
+  padding:12px 28px; border-radius:10px; letter-spacing:.03em; cursor:pointer}
+</style>
+</head>
+<body>
+<div class="box">
+  <img src="icon-192.png" alt="">
+  <h1>オフラインです</h1>
+  <p>通信が切断されています。<br>接続を確認して再度読み込んでください。<br>保存済みの学習データは失われません。</p>
+  <button onclick="location.reload()">再読み込み</button>
+</div>
+</body>
+</html>

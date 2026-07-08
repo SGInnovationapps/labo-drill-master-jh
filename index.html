@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ラボドリ オンライン｜高校受験対策</title>
+<meta name="description" content="理科・英語・社会の高校受験対策ドリル。学年と単元を選んで四択クエストに挑戦、コインを集めてアバターをカスタマイズ。データは端末内にのみ保存されます。">
+<meta name="theme-color" content="#1D9E75">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ラボドリ">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* 教科テーマ（仕様書 §2） */
+  --green:#1D9E75; --green-d:#116A4E; --green-l:#E3F5EE; --green-m:#7ACDB0;
+  --blue:#185FA5;  --blue-d:#0E3E6E;  --blue-l:#E4EFF9;  --blue-m:#7FB0DC;
+  --orange:#BA7517;--orange-d:#7A4D0E;--orange-l:#FBF0DF;--orange-m:#E3B473;
+  --ink:#2B2620; --ink-2:#6B6257; --paper:#FBFAF6; --card:#FFFFFF;
+  --line:#E6E0D4; --gold:#E8A31B; --ok:#1D9E75; --ng:#D8503F;
+  --r:12px; --shadow:0 1px 2px rgba(43,38,32,.06);
+}
+#app[data-subject="理科"]{ --subj:var(--green); --subj-d:var(--green-d); --subj-l:var(--green-l); --subj-m:var(--green-m); }
+#app[data-subject="英語"]{ --subj:var(--blue);  --subj-d:var(--blue-d);  --subj-l:var(--blue-l);  --subj-m:var(--blue-m); }
+#app[data-subject="社会"]{ --subj:var(--orange);--subj-d:var(--orange-d);--subj-l:var(--orange-l);--subj-m:var(--orange-m); }
+
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:"Noto Sans JP","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  background:var(--paper); color:var(--ink); font-weight:400; line-height:1.7;
+  letter-spacing:.01em;
+}
+button{font:inherit; color:inherit; cursor:pointer}
+#app{max-width:480px; margin:0 auto; min-height:100dvh; display:flex; flex-direction:column;
+  background:linear-gradient(180deg, var(--subj-l) 0, var(--paper) 220px);
+  transition:background .35s;
+}
+
+/* ---------- 共通部品 ---------- */
+.screen{display:none; flex:1; flex-direction:column; padding:14px 16px calc(84px + env(safe-area-inset-bottom))}
+.screen.active{display:flex}
+.screen.noNav{padding-bottom:24px}
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow); padding:14px 16px; margin-bottom:12px}
+.hint{font-size:12px; color:var(--ink-2)}
+.btn{display:block; width:100%; border:none; border-radius:10px; padding:13px; font-weight:700; font-size:15px;
+  background:var(--subj); color:#fff; letter-spacing:.03em; transition:opacity .12s}
+.btn:active{opacity:.82}
+.btn.ghost{background:#fff; color:var(--subj-d); border:1px solid var(--subj-m)}
+.btn:disabled{opacity:.45; box-shadow:none}
+.chip{display:inline-flex; align-items:center; gap:4px; background:#fff; border:1px solid var(--line); border-radius:6px; padding:3px 9px; font-size:12.5px; font-weight:500; color:var(--ink-2)}
+
+/* ---------- ヘッダー ---------- */
+header{display:flex; align-items:center; justify-content:space-between; padding:2px 2px 10px}
+.logo{line-height:1.15}
+.logo b{font-size:19px; font-weight:700; letter-spacing:.01em; color:var(--subj-d)}
+.logo small{display:block; font-size:10px; font-weight:500; color:var(--ink-2); letter-spacing:.22em}
+.wallet{display:flex; gap:6px}
+
+/* ---------- 教科タブ ---------- */
+.subjtabs{display:flex; gap:8px; margin-bottom:12px}
+.subjtab{flex:1; border:1px solid var(--line); background:#fff; border-radius:10px; padding:10px 4px;
+  font-weight:700; font-size:15px; color:var(--ink-2); letter-spacing:.06em}
+.subjtab.active{border-color:var(--subj); background:var(--subj); color:#fff}
+
+/* ---------- 学年セグメント ---------- */
+.gradetabs{display:flex; background:#fff; border:1px solid var(--line); border-radius:10px; overflow:hidden; margin-bottom:12px}
+.gradetab{flex:1; border:none; background:transparent; padding:9px 0; font-weight:700; font-size:13.5px; color:var(--ink-2)}
+.gradetab + .gradetab{border-left:1px solid var(--line)}
+.gradetab.active{background:var(--subj); color:#fff}
+
+/* ---------- ホーム ---------- */
+.hero{display:flex; gap:14px; align-items:center}
+.hero .avatarBox{width:104px; flex:none}
+.hero .name{font-size:16px; font-weight:800}
+.lvBar{height:8px; background:var(--subj-l); border:1px solid var(--line); border-radius:99px; overflow:hidden; margin-top:4px}
+.lvBar i{display:block; height:100%; background:var(--subj); border-radius:99px; transition:width .4s}
+.modeGrid{display:grid; gap:10px}
+.modeBtn{display:flex; align-items:center; gap:12px; text-align:left; background:var(--card);
+  border:1px solid var(--line); border-radius:var(--r); padding:14px; box-shadow:var(--shadow)}
+.modeBtn:active{transform:translateY(1px)}
+.modeBtn .em{font-size:17px; width:34px; height:34px; flex:none; border-radius:8px;
+  background:var(--subj-l); color:var(--subj-d); display:flex; align-items:center; justify-content:center}
+.modeBtn b{font-size:15px; color:var(--subj-d); font-weight:700}
+.modeBtn .hint{margin-top:1px}
+.modeBtn .cnt{margin-left:auto; flex:none; font-weight:800; color:var(--subj); font-size:13px}
+
+/* ---------- 単元クエスト ---------- */
+.pageTitle{display:flex; align-items:center; gap:8px; margin:2px 0 12px}
+.pageTitle b{font-size:18px; color:var(--subj-d)}
+.backBtn{border:1px solid var(--line); background:#fff; border-radius:12px; width:38px; height:38px; font-size:17px; font-weight:800; flex:none}
+.unit{display:flex; align-items:center; gap:12px; width:100%; text-align:left;
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:12px 14px; margin-bottom:10px; box-shadow:var(--shadow)}
+.unit .gBadge{flex:none; width:44px; height:44px; border-radius:8px; background:var(--subj-l); color:var(--subj-d);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:800; font-size:15px; line-height:1}
+.unit .gBadge small{font-size:9px; font-weight:700; margin-top:2px}
+.unit b{font-size:15px}
+.mBar{height:8px; background:var(--subj-l); border-radius:99px; overflow:hidden; margin-top:5px; border:1px solid var(--line)}
+.mBar i{display:block; height:100%; background:var(--subj)}
+.unit .pct{margin-left:auto; flex:none; font-weight:800; font-size:13px; color:var(--subj-d)}
+.unit.done .gBadge{background:var(--subj); color:#fff}
+
+/* ---------- クイズ ---------- */
+.drillRow{display:flex; gap:5px; flex-wrap:wrap; margin-bottom:12px}
+.dcell{width:26px; height:26px; border:1px solid var(--line); border-radius:5px; background:#fff;
+  display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800}
+.dcell.now{border-color:var(--subj); border-width:2px; background:var(--subj-l)}
+.dcell.ok{border-color:var(--ok); color:var(--ok); animation:stamp .25s}
+.dcell.ng{border-color:var(--ng); color:var(--ng); animation:stamp .25s}
+@keyframes stamp{0%{transform:scale(1.6)}100%{transform:scale(1)}}
+.qMeta{display:flex; gap:6px; margin-bottom:8px}
+.qText{font-size:16px; font-weight:500; line-height:1.8; margin:0 0 16px}
+.choices{display:grid; gap:10px}
+.choice{position:relative; text-align:left; background:#fff; border:1px solid var(--line); border-radius:10px;
+  padding:13px 14px 13px 44px; font-size:15px; font-weight:500; box-shadow:var(--shadow)}
+.choice::before{content:attr(data-k); position:absolute; left:12px; top:50%; transform:translateY(-50%);
+  width:24px; height:24px; border-radius:5px; background:var(--subj-l); color:var(--subj-d);
+  display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800}
+.choice.sel-ok{border-color:var(--ok); border-width:2px; background:#EDF8F3}
+.choice.sel-ok::before{background:var(--ok); color:#fff; content:"○"}
+.choice.sel-ng{border-color:var(--ng); border-width:2px; background:#FBEEEC}
+.choice.sel-ng::before{background:var(--ng); color:#fff; content:"×"}
+.choice.reveal{border-color:var(--ok); border-width:2px}
+.choice:disabled{cursor:default}
+.explain{border:1px solid var(--subj-m); background:var(--subj-l); border-radius:var(--r); padding:12px 14px; margin-top:14px}
+.explain b{color:var(--subj-d); font-weight:700}
+.gain{font-weight:800; color:var(--gold); font-size:13px; margin-top:6px}
+
+/* ---------- 結果 ---------- */
+.resultBig{text-align:center; padding:22px 14px}
+.resultBig .score{font-size:44px; font-weight:700; color:var(--subj-d); line-height:1.1}
+.resultBig .score small{font-size:18px; color:var(--ink-2)}
+.rewardRow{display:flex; justify-content:center; gap:10px; margin-top:12px}
+
+/* ---------- アバター ---------- */
+.avatarBox{position:relative; aspect-ratio:1; border-radius:12px; overflow:hidden; border:1px solid var(--line); background:#EAF3F7}
+.avatarBox .layer{position:absolute; inset:0; display:flex; align-items:center; justify-content:center}
+.avatarBox img{width:100%; height:100%; object-fit:contain}
+.avatarBox .fb{line-height:1; font-size:32px}
+.layer.l-head{align-items:flex-start; padding-top:4%}
+.layer.l-hand{align-items:flex-end; justify-content:flex-end; padding:0 8% 10% 0}
+.layer.l-pet{align-items:flex-end; justify-content:flex-start; padding:0 0 8% 8%}
+.bg-lab{background:linear-gradient(180deg,#DFF0F6 0,#F6FBFD 70%)}
+.bg-cell{background:radial-gradient(circle at 50% 45%,#D8F3E4 0,#B8E6CD 75%)}
+.bg-mountain{background:linear-gradient(180deg,#CFE9F5 0 55%,#BFE3C9 55%)}
+.bg-night{background:linear-gradient(180deg,#1F2A57 0,#3D4C86 80%)}
+.bg-space{background:radial-gradient(circle at 30% 25%,#4B3B84 0,#191A38 80%)}
+.slotTabs{display:flex; gap:6px; margin-bottom:12px; overflow-x:auto}
+.slotTab{flex:none; border:1px solid var(--line); background:#fff; border-radius:6px; padding:7px 14px; font-weight:700; font-size:13px; color:var(--ink-2)}
+.slotTab.active{background:var(--subj); border-color:var(--subj-d); color:#fff}
+.itemGrid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.item{background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px 6px 8px; text-align:center; box-shadow:var(--shadow)}
+.item .pv{font-size:34px; line-height:1.3}
+.item .nm{font-size:12px; font-weight:700; margin:2px 0 6px; min-height:2.4em; display:flex; align-items:center; justify-content:center}
+.item .act{width:100%; border:none; border-radius:6px; padding:6px 0; font-weight:700; font-size:12px}
+.item .act.buy{background:var(--gold); color:#fff}
+.item .act.equip{background:var(--subj-l); color:var(--subj-d)}
+.item .act.on{background:var(--subj); color:#fff}
+.item .act.lock{background:var(--line); color:var(--ink-2)}
+.item.equipped{border-color:var(--subj)}
+
+/* ---------- オンボーディング ---------- */
+.onboard{justify-content:center; text-align:center}
+.onboard .bigLogo{font-size:28px; font-weight:700; color:var(--subj-d); line-height:1.3}
+.onboard .bigLogo small{display:block; font-size:13px; letter-spacing:.25em; color:var(--ink-2)}
+.onboard input{width:100%; border:1px solid var(--line); border-radius:10px; padding:12px; font:inherit; font-weight:500; text-align:center; margin:14px 0}
+.notice{font-size:12px; color:var(--ink-2); text-align:left; background:#fff; border:1px solid var(--line); border-radius:14px; padding:10px 12px; margin-top:16px}
+
+/* ---------- 下部ナビ・トースト ---------- */
+/* ---------- ホーム画面に追加 ---------- */
+#a2hs[hidden]{display:none}
+#a2hs{position:fixed; inset:0; z-index:20; display:flex; align-items:flex-end; justify-content:center}
+.a2hs-back{position:absolute; inset:0; background:rgba(43,38,32,.45)}
+.a2hs-sheet{position:relative; width:100%; max-width:480px; background:#fff; border-radius:16px 16px 0 0;
+  padding:22px 20px calc(20px + env(safe-area-inset-bottom)); text-align:center;
+  animation:sheetUp .28s ease-out}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.a2hs-icon{width:60px; height:60px; border-radius:12px; border:1px solid var(--line)}
+.a2hs-sheet b{display:block; font-size:17px; font-weight:700; margin:12px 0 6px}
+.a2hs-lead{font-size:13px; color:var(--ink-2); line-height:1.75; margin:0 0 16px}
+.a2hs-steps{text-align:left; background:var(--paper); border:1px solid var(--line); border-radius:10px;
+  padding:12px 14px; margin-bottom:16px}
+.a2hs-step{display:flex; align-items:center; gap:9px; font-size:13.5px; padding:5px 0}
+.a2hs-step span{flex:none; width:20px; height:20px; border-radius:50%; background:var(--subj); color:#fff;
+  font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center}
+.a2hs-step b{display:inline; font-size:inherit; margin:0}
+.a2hs-step svg{vertical-align:-2px; color:var(--blue)}
+.a2hs-sheet .btn{margin-bottom:8px}
+.a2hs-sheet .btn:last-child{margin-bottom:0}
+@media (prefers-reduced-motion:reduce){ .a2hs-sheet{animation:none} }
+
+nav{position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px;
+  display:flex; background:#fff; border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom); z-index:5}
+nav button{flex:1; border:none; background:none; padding:9px 0 7px; font-size:11px; font-weight:700; color:var(--ink-2)}
+nav button .em{display:block; font-size:18px}
+nav button.active{color:var(--subj-d)}
+#toast{position:fixed; left:50%; bottom:96px; transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff;
+  padding:10px 18px; border-radius:8px; font-weight:500; font-size:14px; opacity:0; transition:all .25s; z-index:9; pointer-events:none; white-space:nowrap}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div id="app" data-subject="理科">
+
+  <!-- オンボーディング -->
+  <section class="screen onboard noNav" id="scr-onboard">
+    <div class="bigLogo">ラボドリ<br>オンライン<small>高校受験対策</small></div>
+    <p style="font-size:14px; margin-top:14px">理科・英語・社会の四択クエストで実力を測る。<br>正解でコインとEXPを獲得し、アバターを育成。</p>
+    <div class="card" style="text-align:left">
+      <b style="font-size:14px">ニックネームを登録</b>
+      <input id="obName" maxlength="10" placeholder="例：ラボ太郎">
+      <button class="btn" onclick="finishOnboard()">開始する</button>
+      <div class="notice">学習データ・コイン・アバターは<b>この端末の中にだけ</b>保存されます。アプリの削除やブラウザのデータ消去を行うと、記録も失われます。</div>
+    </div>
+  </section>
+
+  <!-- ホーム -->
+  <section class="screen" id="scr-home">
+    <header>
+      <div class="logo"><b>ラボドリ オンライン</b><small>高校受験対策</small></div>
+      <div class="wallet">
+        <span class="chip">🪙 <span id="hCoin">0</span></span>
+        <span class="chip">Lv.<span id="hLv">1</span></span>
+      </div>
+    </header>
+
+    <div class="subjtabs" id="subjTabs">
+      <button class="subjtab active" data-s="理科" onclick="setSubject('理科')">理科</button>
+      <button class="subjtab" data-s="英語" onclick="setSubject('英語')">英語</button>
+      <button class="subjtab" data-s="社会" onclick="setSubject('社会')">社会</button>
+    </div>
+
+    <div class="card hero">
+      <div class="avatarBox" id="homeAvatar"></div>
+      <div style="flex:1; min-width:0">
+        <div class="name" id="hName"></div>
+        <div class="hint">Lv.<span id="hLv2">1</span>　次のレベルまで <span id="hExpLeft">0</span> EXP</div>
+        <div class="lvBar"><i id="hExpBar" style="width:0%"></i></div>
+        <div class="hint" style="margin-top:6px">連続学習 <b id="hStreak">1</b>日目　／　本日 <b id="hToday">0</b>コイン</div>
+      </div>
+    </div>
+
+    <div class="modeGrid">
+      <button class="modeBtn" onclick="show('scr-units'); renderUnits()">
+        <span class="em">単</span>
+        <span><b>単元クエスト</b><div class="hint">学年と単元を選んで挑戦</div></span>
+        <span class="cnt" id="cntUnit"></span>
+      </button>
+      <button class="modeBtn" onclick="startRandom()">
+        <span class="em">乱</span>
+        <span><b>ランダム10問</b><div class="hint">選択範囲から実力テスト</div></span>
+        <span class="cnt" id="cntRandom"></span>
+      </button>
+      <button class="modeBtn" onclick="startReview()">
+        <span class="em">復</span>
+        <span><b>復習クエスト</b><div class="hint">誤答した問題を再挑戦</div></span>
+        <span class="cnt" id="cntReview"></span>
+      </button>
+    </div>
+    <p class="hint" style="text-align:center; margin-top:10px">出題範囲：<span id="hRange"></span>（単元クエストで変更）</p>
+  </section>
+
+  <!-- 単元クエスト -->
+  <section class="screen" id="scr-units">
+    <div class="pageTitle">
+      <button class="backBtn" onclick="show('scr-home'); renderHome()">←</button>
+      <b>単元クエスト</b>
+      <span class="chip" id="uSubj" style="margin-left:auto"></span>
+    </div>
+    <p class="hint" style="margin:0 0 6px">出題範囲（履修済みの学年まで）</p>
+    <div class="gradetabs" id="gradeTabs">
+      <button class="gradetab" data-g="1" onclick="setGrade(1)">1年</button>
+      <button class="gradetab" data-g="2" onclick="setGrade(2)">1〜2年</button>
+      <button class="gradetab" data-g="3" onclick="setGrade(3)">1〜3年</button>
+    </div>
+    <div id="unitList"></div>
+  </section>
+
+  <!-- クイズ -->
+  <section class="screen noNav" id="scr-quiz">
+    <div class="pageTitle">
+      <button class="backBtn" onclick="quitQuiz()">←</button>
+      <b id="qTitle"></b>
+    </div>
+    <div class="drillRow" id="drillRow"></div>
+    <div class="card">
+      <div class="qMeta">
+        <span class="chip" id="qBadgeGrade"></span>
+        <span class="chip" id="qBadgeCat"></span>
+      </div>
+      <p class="qText" id="qText"></p>
+      <div class="choices" id="qChoices"></div>
+      <div id="qExplain"></div>
+    </div>
+    <button class="btn" id="qNext" style="display:none" onclick="nextQuestion()">次の問題 →</button>
+  </section>
+
+  <!-- 結果 -->
+  <section class="screen noNav" id="scr-result">
+    <div class="pageTitle"><b id="rTitle">クエスト結果</b></div>
+    <div class="card resultBig">
+      <div id="rStamp" style="font-size:34px"></div>
+      <div class="score"><span id="rScore">0</span><small> / <span id="rTotal">0</span> 問</small></div>
+      <div id="rMsg" style="font-weight:800; color:var(--subj-d); margin-top:4px"></div>
+      <div class="rewardRow">
+        <span class="chip">🪙 +<span id="rCoin">0</span></span>
+        <span class="chip">⭐ +<span id="rExp">0</span> EXP</span>
+      </div>
+      <div id="rLevelUp" style="display:none; margin-top:10px; font-weight:700; color:var(--gold)">LEVEL UP　Lv.<span id="rNewLv"></span> に到達</div>
+    </div>
+    <button class="btn" id="rRetry" style="display:none; margin-bottom:10px" onclick="retryWrong()">誤答した問題を再挑戦</button>
+    <button class="btn ghost" onclick="show('scr-home'); renderHome()">ホームへ戻る</button>
+  </section>
+
+  <!-- カスタム -->
+  <section class="screen" id="scr-avatar">
+    <header>
+      <div class="logo"><b>アバターカスタム</b><small>AVATAR CUSTOM</small></div>
+      <div class="wallet"><span class="chip">🪙 <span id="aCoin">0</span></span><span class="chip">Lv.<span id="aLv">1</span></span></div>
+    </header>
+    <div class="card" style="display:flex; justify-content:center; padding:18px">
+      <div class="avatarBox" id="bigAvatar" style="width:200px"></div>
+    </div>
+    <div class="slotTabs" id="slotTabs"></div>
+    <div class="itemGrid" id="itemGrid"></div>
+  </section>
+
+  <nav id="nav">
+    <button class="active" data-n="home" onclick="navTo('home')"><span class="em">🏠</span>ホーム</button>
+    <button data-n="avatar" onclick="navTo('avatar')"><span class="em">🧢</span>カスタム</button>
+  </nav>
+
+  <!-- ホーム画面に追加（初回のみ表示） -->
+  <div id="a2hs" role="dialog" aria-modal="true" aria-labelledby="a2hsTitle" hidden>
+    <div class="a2hs-back" onclick="dismissA2HS()"></div>
+    <div class="a2hs-sheet">
+      <img class="a2hs-icon" src="icon-192.png" alt="">
+      <b id="a2hsTitle">ホーム画面に追加</b>
+      <p class="a2hs-lead">アプリとして追加すると、次回からワンタップで起動でき、オフラインでも学習できます。</p>
+      <div id="a2hsIOS" class="a2hs-steps" hidden>
+        <div class="a2hs-step"><span>1</span>画面下の <b>共有</b> <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 3v12M12 3l-4 4M12 3l4 4M5 13v7h14v-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> をタップ</div>
+        <div class="a2hs-step"><span>2</span><b>「ホーム画面に追加」</b>を選択</div>
+        <div class="a2hs-step"><span>3</span>右上の <b>「追加」</b> をタップ</div>
+      </div>
+      <button class="btn" id="a2hsInstall" style="display:none" onclick="runInstall()">追加する</button>
+      <button class="btn ghost" onclick="dismissA2HS()">あとで</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script>
+"use strict";
+/* =========================================================
+   ラボドリ オンライン／高校受験対策
+   仕様書 README_juken.md 準拠：
+   - STORE_KEY: juken_v1（localStorage・端末内のみ）
+   - questions.json を network-first で読込（失敗時は内蔵サンプル）
+   - choice_1 = 正解。表示時にシャッフル
+   - 出題は 教科 AND 学年（gradeMax）でフィルタ（pool()に集約）
+   ========================================================= */
+const STORE_KEY = "juken_v1";
+const SUBJECTS = ["理科","英語","社会"];
+
+/* ---------- ホーム画面に追加（PWA） ----------
+   beforeinstallprompt は init より先に発火しうるので、最上部で捕捉しておく。 */
+let deferredPrompt = null;
+let a2hsPending = false;     // 案内を出したいがプロンプト待ちの状態
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();          // ブラウザ既定のミニバーを抑止し、任意のタイミングで出す
+  deferredPrompt = e;
+  const btn = document.getElementById("a2hsInstall");
+  if(btn) btn.style.display = "block";
+  if(a2hsPending){ a2hsPending = false; maybeShowA2HS(); }  // 発火が遅れた場合
+});
+window.addEventListener("appinstalled", () => {
+  deferredPrompt = null;
+  hideA2HS();
+  state.a2hsSeen = true; saveState();
+  toast("ホーム画面に追加しました");
+});
+
+/* ---------- アバターアイテム（SVG32点＋絵文字フォールバック） ---------- */
+const SLOTS = [
+  {key:"body", label:"本体"},
+  {key:"head", label:"頭部"},
+  {key:"hand", label:"手持ち"},
+  {key:"pet",  label:"相棒"},
+  {key:"bg",   label:"背景"},
+];
+const ITEMS = [
+  {id:"body_face",  slot:"body", name:"犬",       fb:"🐶", price:0,   lv:1},
+  {id:"body_cat",   slot:"body", name:"猫",       fb:"🐱", price:120, lv:1},
+  {id:"body_rabbit",slot:"body", name:"兎",       fb:"🐰", price:120, lv:1},
+  {id:"body_bear",  slot:"body", name:"熊",       fb:"🐻", price:150, lv:2},
+  {id:"body_panda", slot:"body", name:"パンダ",   fb:"🐼", price:200, lv:3},
+  {id:"body_fox",   slot:"body", name:"狐",       fb:"🦊", price:200, lv:3},
+  {id:"body_lion",  slot:"body", name:"ライオン", fb:"🦁", price:300, lv:5},
+  {id:"body_tiger", slot:"body", name:"虎",       fb:"🐯", price:300, lv:5},
+  {id:"body_owl",   slot:"body", name:"梟",       fb:"🦉", price:400, lv:7},
+  {id:"body_koala", slot:"body", name:"コアラ",   fb:"🐨", price:400, lv:7},
+  {id:"head_goggle",slot:"head", name:"ゴーグル", fb:"🥽", price:80,  lv:1},
+  {id:"head_cap",   slot:"head", name:"キャップ", fb:"🧢", price:100, lv:1},
+  {id:"head_bulb",  slot:"head", name:"発想",     fb:"💡", price:150, lv:2},
+  {id:"head_micro", slot:"head", name:"マイク",   fb:"🎙️", price:120, lv:2},
+  {id:"head_grad",  slot:"head", name:"角帽",     fb:"🎓", price:200, lv:4},
+  {id:"head_crown", slot:"head", name:"王冠",     fb:"👑", price:500, lv:8},
+  {id:"hand_flask", slot:"hand", name:"フラスコ", fb:"⚗️", price:80,  lv:1},
+  {id:"hand_tube",  slot:"hand", name:"試験管",   fb:"🧪", price:80,  lv:1},
+  {id:"hand_magnet",slot:"hand", name:"磁石",     fb:"🧲", price:100, lv:1},
+  {id:"hand_book",  slot:"hand", name:"参考書",   fb:"📖", price:120, lv:2},
+  {id:"hand_dna",   slot:"hand", name:"DNA",      fb:"🧬", price:150, lv:3},
+  {id:"hand_scope", slot:"hand", name:"顕微鏡",   fb:"🔬", price:200, lv:4},
+  {id:"pet_ecoli",  slot:"pet",  name:"大腸菌",   fb:"🦠", price:150, lv:1},
+  {id:"pet_mouse",  slot:"pet",  name:"マウス",   fb:"🐭", price:150, lv:1},
+  {id:"pet_frog",   slot:"pet",  name:"蛙",       fb:"🐸", price:200, lv:2},
+  {id:"pet_water",  slot:"pet",  name:"水滴",     fb:"💧", price:200, lv:3},
+  {id:"pet_cat",    slot:"pet",  name:"野良猫",   fb:"🐈", price:250, lv:4},
+  {id:"bg_lab",     slot:"bg",   name:"実験室",   fb:null, price:200, lv:1},
+  {id:"bg_cell",    slot:"bg",   name:"細胞",     fb:null, price:250, lv:2},
+  {id:"bg_mountain",slot:"bg",   name:"山岳",     fb:null, price:250, lv:3},
+  {id:"bg_night",   slot:"bg",   name:"夜空",     fb:null, price:300, lv:5},
+  {id:"bg_space",   slot:"bg",   name:"宇宙",     fb:null, price:400, lv:7},
+];
+
+/* ---------- 状態 ---------- */
+function defaultAvatar(){
+  return { equip:{body:"body_face", head:null, hand:null, pet:null, bg:null}, owned:["body_face"] };
+}
+function defaultState(){
+  return {
+    profile:{name:"", lastLogin:null, streak:0},
+    wrong:{},            // {qid: まちがえ回数}
+    correct:{},          // {qid: true} 習得度用
+    coins:0, exp:0,
+    pointsToday:0, todayKey:null,
+    subject:"理科",
+    gradeMax:1,          // ★学年上限（1/2/3）
+    a2hsSeen:false,      // ホーム画面に追加の案内を表示済みか
+    avatar:defaultAvatar(),
+  };
+}
+let state = loadState();
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return defaultState();
+    const s = Object.assign(defaultState(), JSON.parse(raw));
+    if(!s.gradeMax) s.gradeMax = 1;                       // 旧データ移行
+    if(!SUBJECTS.includes(s.subject)) s.subject = "理科";
+    if(!s.avatar || !s.avatar.equip) s.avatar = defaultAvatar();
+    return s;
+  }catch(e){ return defaultState(); }
+}
+function saveState(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
+
+/* ---------- レベル計算 ---------- */
+function expNeed(lv){ return 100 + (lv-1)*40; }           // Lv→次までの必要EXP
+function levelInfo(exp){
+  let lv=1, rest=exp;
+  while(rest >= expNeed(lv)){ rest -= expNeed(lv); lv++; }
+  return {lv, rest, need:expNeed(lv)};
+}
+
+/* ---------- 問題データ ---------- */
+let QUESTIONS = [];
+async function loadQuestions(){
+  try{
+    const res = await fetch("questions.json", {cache:"no-cache"});   // network-first
+    if(res.ok){
+      const data = await res.json();
+      if(Array.isArray(data) && data.length){ QUESTIONS = data; return; }
+    }
+  }catch(e){}
+  QUESTIONS = EMBEDDED_QUESTIONS;   // オフライン・未配置時のフォールバック
+}
+/* 出題プール：教科 AND 学年（仕様書 §3-3。全モードここを通す） */
+function pool(subject, gradeMax){
+  const s = subject || state.subject, g = gradeMax || state.gradeMax || 1;
+  return QUESTIONS.filter(q => q.subject === s && (q.grade || 1) <= g);
+}
+
+/* ---------- 画面制御 ---------- */
+function show(id){
+  document.querySelectorAll(".screen").forEach(el => el.classList.toggle("active", el.id === id));
+  const nav = document.getElementById("nav");
+  nav.style.display = document.getElementById(id).classList.contains("noNav") ? "none" : "flex";
+  window.scrollTo(0,0);
+}
+function navTo(where){
+  document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("active", b.dataset.n === where));
+  if(where === "home"){ show("scr-home"); renderHome(); }
+  else { show("scr-avatar"); renderAvatarScreen(); }
+}
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._tm); t._tm = setTimeout(()=>t.classList.remove("show"), 1600);
+}
+
+/* ---------- 教科・学年 ---------- */
+function setSubject(s){
+  state.subject = s; saveState();
+  document.getElementById("app").dataset.subject = s;
+  document.querySelectorAll("#subjTabs .subjtab").forEach(t => t.classList.toggle("active", t.dataset.s === s));
+  renderHome();
+}
+function setGrade(g){
+  state.gradeMax = g; saveState();
+  syncGradeTabs();
+  renderUnits(); renderHome();
+}
+function syncGradeTabs(){
+  document.querySelectorAll("#gradeTabs .gradetab").forEach(t =>
+    t.classList.toggle("active", +t.dataset.g === state.gradeMax));
+}
+function rangeLabel(){ return state.gradeMax === 1 ? "1年" : "1〜" + state.gradeMax + "年"; }
+
+/* ---------- ホーム ---------- */
+function renderHome(){
+  const li = levelInfo(state.exp);
+  document.getElementById("hName").textContent = (state.profile.name || "ゲスト") + " のルーム";
+  document.getElementById("hCoin").textContent = state.coins;
+  document.getElementById("hLv").textContent = li.lv;
+  document.getElementById("hLv2").textContent = li.lv;
+  document.getElementById("hExpLeft").textContent = li.need - li.rest;
+  document.getElementById("hExpBar").style.width = Math.round(li.rest / li.need * 100) + "%";
+  document.getElementById("hStreak").textContent = state.profile.streak || 1;
+  document.getElementById("hToday").textContent = state.pointsToday || 0;
+  document.getElementById("hRange").textContent = state.subject + "・" + rangeLabel();
+
+  const p = pool();
+  const cats = new Set(p.map(q => q.category));
+  const rev = p.filter(q => state.wrong[q.id]).length;
+  document.getElementById("cntUnit").textContent = cats.size ? cats.size + "単元" : "準備中";
+  document.getElementById("cntRandom").textContent = p.length ? p.length + "問" : "準備中";
+  document.getElementById("cntReview").textContent = rev ? rev + "問" : "なし";
+  renderAvatar(document.getElementById("homeAvatar"));
+}
+
+/* ---------- 単元クエスト ---------- */
+function renderUnits(){
+  syncGradeTabs();
+  document.getElementById("uSubj").textContent = state.subject;
+  const box = document.getElementById("unitList");
+  box.innerHTML = "";
+  const p = pool();
+  if(!p.length){
+    box.innerHTML = '<div class="card hint">この範囲の問題は未収録です。学年または教科を切り替えてください。</div>';
+    return;
+  }
+  // 学年→単元の順で並べる
+  const map = new Map();  // key: grade|category
+  p.forEach(q => {
+    const key = (q.grade||1) + "|" + q.category;
+    if(!map.has(key)) map.set(key, {grade:q.grade||1, category:q.category, qs:[]});
+    map.get(key).qs.push(q);
+  });
+  [...map.values()].sort((a,b)=> a.grade - b.grade || a.category.localeCompare(b.category,"ja"))
+  .forEach(u => {
+    const got = u.qs.filter(q => state.correct[q.id]).length;
+    const pct = Math.round(got / u.qs.length * 100);
+    const el = document.createElement("button");
+    el.className = "unit" + (pct === 100 ? " done" : "");
+    el.innerHTML =
+      '<span class="gBadge">' + (pct===100 ? "✓" : u.grade) + '<small>' + (pct===100 ? "修得" : "年") + '</small></span>' +
+      '<span style="flex:1; min-width:0"><b>' + esc(u.category) + '</b>' +
+      '<div class="hint">' + u.qs.length + '問　正解済 ' + got + '問</div>' +
+      '<div class="mBar"><i style="width:' + pct + '%"></i></div></span>' +
+      '<span class="pct">' + pct + '%</span>';
+    el.onclick = () => startUnit(u);
+    box.appendChild(el);
+  });
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+/* ---------- クイズ本体 ---------- */
+let session = null;
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+
+function startUnit(u){ beginQuiz(shuffle(u.qs).slice(0,10), "🗺️ " + u.category); }
+function startRandom(){
+  const p = pool();
+  if(!p.length) return toast("この範囲の問題は未収録です");
+  beginQuiz(shuffle(p).slice(0,10), "ランダム10問");
+}
+function startReview(){
+  const p = pool().filter(q => state.wrong[q.id]);
+  if(!p.length) return toast("復習対象の問題はありません");
+  beginQuiz(shuffle(p).slice(0,10), "復習クエスト");
+}
+function beginQuiz(list, title){
+  session = {list, idx:0, okCount:0, coin:0, exp:0, wrongQs:[], title};
+  document.getElementById("qTitle").textContent = title + "（" + state.subject + "・" + rangeLabel() + "）";
+  const row = document.getElementById("drillRow");
+  row.innerHTML = "";
+  list.forEach((_,i) => {
+    const c = document.createElement("span");
+    c.className = "dcell"; c.id = "dc" + i; c.textContent = i+1;
+    row.appendChild(c);
+  });
+  show("scr-quiz");
+  renderQuestion();
+}
+function renderQuestion(){
+  const q = session.list[session.idx];
+  document.querySelectorAll(".dcell.now").forEach(c=>c.classList.remove("now"));
+  document.getElementById("dc"+session.idx).classList.add("now");
+  document.getElementById("qBadgeGrade").textContent = (q.grade||1) + "年";
+  document.getElementById("qBadgeCat").textContent = q.category;
+  document.getElementById("qText").innerHTML = q.question;   // HTML可（仕様）
+  document.getElementById("qExplain").innerHTML = "";
+  document.getElementById("qNext").style.display = "none";
+
+  const choices = shuffle([
+    {t:q.choice_1, ok:true}, {t:q.choice_2, ok:false},
+    {t:q.choice_3, ok:false}, {t:q.choice_4, ok:false},
+  ]);
+  const box = document.getElementById("qChoices");
+  box.innerHTML = "";
+  const keys = ["ア","イ","ウ","エ"];
+  choices.forEach((c,i) => {
+    const b = document.createElement("button");
+    b.className = "choice"; b.dataset.k = keys[i];
+    b.innerHTML = esc(c.t);
+    b.onclick = () => answer(b, c.ok, q);
+    box.appendChild(b);
+  });
+}
+function answer(btn, ok, q){
+  document.querySelectorAll("#qChoices .choice").forEach(b => b.disabled = true);
+  const cell = document.getElementById("dc"+session.idx);
+  let gainHtml = "";
+  if(ok){
+    btn.classList.add("sel-ok");
+    cell.classList.add("ok"); cell.textContent = "○";
+    session.okCount++;
+    const coin = 10, exp = 8 + (q.difficulty||1)*4;
+    session.coin += coin; session.exp += exp;
+    state.coins += coin; state.exp += exp;
+    state.pointsToday = (state.pointsToday||0) + coin;
+    state.correct[q.id] = true;
+    if(state.wrong[q.id]){ delete state.wrong[q.id]; gainHtml = '<div class="gain">復習クリア。この問題を克服しました</div>'; }
+    gainHtml = '<div class="gain">🪙 +' + coin + '　⭐ +' + exp + ' EXP</div>' + gainHtml;
+  }else{
+    btn.classList.add("sel-ng");
+    cell.classList.add("ng"); cell.textContent = "×";
+    state.wrong[q.id] = (state.wrong[q.id]||0) + 1;
+    session.wrongQs.push(q);
+    // 正解を表示
+    document.querySelectorAll("#qChoices .choice").forEach(b => {
+      if(b.textContent === q.choice_1) b.classList.add("reveal");
+    });
+  }
+  saveState();
+  document.getElementById("qExplain").innerHTML =
+    '<div class="explain"><b>' + (ok ? "正解" : "不正解　正解は " + esc(q.choice_1)) + '</b><br>' +
+    esc(q.explanation || "") + gainHtml + '</div>';
+  const nx = document.getElementById("qNext");
+  nx.textContent = session.idx + 1 < session.list.length ? "次の問題 →" : "結果を見る";
+  nx.style.display = "block";
+}
+function nextQuestion(){
+  if(session.idx + 1 < session.list.length){ session.idx++; renderQuestion(); }
+  else finishQuiz();
+}
+function quitQuiz(){ show("scr-home"); renderHome(); }
+function finishQuiz(){
+  const before = levelInfo(state.exp - session.exp).lv;
+  const after  = levelInfo(state.exp).lv;
+  const n = session.list.length, ok = session.okCount;
+  document.getElementById("rTitle").textContent = session.title + " の結果";
+  document.getElementById("rScore").textContent = ok;
+  document.getElementById("rTotal").textContent = n;
+  document.getElementById("rCoin").textContent = session.coin;
+  document.getElementById("rExp").textContent = session.exp;
+  document.getElementById("rStamp").textContent = ok===n ? "🏆" : ok >= n*0.7 ? "◎" : "△";
+  document.getElementById("rMsg").textContent =
+    ok===n ? "全問正解。完璧です" : ok >= n*0.7 ? "good。この調子で継続しよう" : "復習クエストで弱点を補強しよう";
+  const lu = document.getElementById("rLevelUp");
+  if(after > before){ lu.style.display = "block"; document.getElementById("rNewLv").textContent = after; }
+  else lu.style.display = "none";
+  const retry = document.getElementById("rRetry");
+  retry.style.display = session.wrongQs.length ? "block" : "none";
+  show("scr-result");
+}
+function retryWrong(){ beginQuiz(shuffle(session.wrongQs), "再挑戦"); }
+
+/* ---------- アバター描画（SVG→絵文字フォールバック） ---------- */
+function renderAvatar(box){
+  box.innerHTML = "";
+  const eq = state.avatar.equip;
+  box.className = "avatarBox" + (eq.bg ? " " + eq.bg.replace("bg_","bg-") : "");
+  if(eq.bg){
+    const bgLayer = layerEl("bg", eq.bg, true);
+    if(bgLayer) box.appendChild(bgLayer);
+  }
+  ["body","hand","head","pet"].forEach(slot => {
+    if(!eq[slot]) return;
+    const l = layerEl(slot, eq[slot], false);
+    if(l) box.appendChild(l);
+  });
+}
+const FB_SCALE = { body:.52, head:.26, hand:.24, pet:.22 };
+function layerEl(slot, id, isBg){
+  const item = ITEMS.find(i => i.id === id);
+  const wrap = document.createElement("div");
+  wrap.className = "layer l-" + slot;
+  const img = document.createElement("img");
+  img.alt = ""; img.src = "assets/avatar/" + slot + "/" + id + ".svg";
+  img.onerror = () => {  // SVG未配置なら絵文字（bgはCSSグラデのみ）
+    img.remove();                                   // 壊れた画像アイコンを消す
+    if(isBg || !item || !item.fb){ wrap.remove(); return; }
+    const sp = document.createElement("span");
+    sp.className = "fb"; sp.textContent = item.fb;
+    wrap.appendChild(sp);
+    fitFb(wrap, slot);
+  };
+  wrap.appendChild(img);
+  return wrap;
+}
+function fitFb(wrap, slot){
+  const box = wrap.closest(".avatarBox");
+  const sp = wrap.querySelector(".fb");
+  if(!box || !sp) return;
+  const px = () => {
+    const w = box.clientWidth;
+    if(!w) return requestAnimationFrame(px);       // レイアウト確定を待つ
+    sp.style.fontSize = Math.round(w * (FB_SCALE[slot] || .4)) + "px";
+  };
+  px();
+}
+
+/* ---------- カスタム画面 ---------- */
+let curSlot = "body";
+function renderAvatarScreen(){
+  const li = levelInfo(state.exp);
+  document.getElementById("aCoin").textContent = state.coins;
+  document.getElementById("aLv").textContent = li.lv;
+  renderAvatar(document.getElementById("bigAvatar"));
+  const tabs = document.getElementById("slotTabs");
+  tabs.innerHTML = "";
+  SLOTS.forEach(s => {
+    const b = document.createElement("button");
+    b.className = "slotTab" + (s.key === curSlot ? " active" : "");
+    b.textContent = s.label;
+    b.onclick = () => { curSlot = s.key; renderAvatarScreen(); };
+    tabs.appendChild(b);
+  });
+  const grid = document.getElementById("itemGrid");
+  grid.innerHTML = "";
+  const lv = li.lv;
+  ITEMS.filter(i => i.slot === curSlot).forEach(item => {
+    const owned = state.avatar.owned.includes(item.id);
+    const equipped = state.avatar.equip[item.slot] === item.id;
+    const locked = lv < item.lv;
+    const d = document.createElement("div");
+    d.className = "item" + (equipped ? " equipped" : "");
+    let pv = item.fb ? item.fb : "🖼️";
+    let act;
+    if(locked)        act = '<button class="act lock" disabled>Lv.' + item.lv + ' で解放</button>';
+    else if(!owned)   act = '<button class="act buy" onclick="buyItem(\'' + item.id + '\')">🪙 ' + item.price + '</button>';
+    else if(equipped) act = '<button class="act on" onclick="unequipItem(\'' + item.id + '\')">装備中</button>';
+    else              act = '<button class="act equip" onclick="equipItem(\'' + item.id + '\')">装備する</button>';
+    d.innerHTML = '<div class="pv">' + pv + '</div><div class="nm">' + esc(item.name) + '</div>' + act;
+    grid.appendChild(d);
+  });
+}
+function buyItem(id){
+  const item = ITEMS.find(i => i.id === id);
+  if(state.coins < item.price) return toast("コインが不足しています");
+  state.coins -= item.price;
+  state.avatar.owned.push(id);
+  state.avatar.equip[item.slot] = id;
+  saveState(); renderAvatarScreen();
+  toast("「" + item.name + "」を入手しました");
+}
+function equipItem(id){
+  const item = ITEMS.find(i => i.id === id);
+  state.avatar.equip[item.slot] = id;
+  saveState(); renderAvatarScreen();
+}
+function unequipItem(id){
+  const item = ITEMS.find(i => i.id === id);
+  if(item.slot === "body") return toast("本体は解除できません");
+  state.avatar.equip[item.slot] = null;
+  saveState(); renderAvatarScreen();
+}
+
+/* ---------- ホーム画面に追加：表示制御 ---------- */
+function isStandalone(){
+  return window.matchMedia("(display-mode: standalone)").matches ||
+         window.navigator.standalone === true;   // iOS Safari
+}
+function isIOS(){
+  const ua = navigator.userAgent;
+  return /iPad|iPhone|iPod/.test(ua) ||
+         (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); // iPadOS
+}
+/* 初回ログイン時にホーム画面への追加を促す */
+function maybeShowA2HS(){
+  if(state.a2hsSeen) return;      // 案内は初回のみ
+  if(isStandalone()) return;      // すでにアプリとして起動している
+  const ios = isIOS();
+  // iOSは beforeinstallprompt が無く手動追加のみ。それ以外はプロンプトが取れた時だけ出す。
+  if(!ios && !deferredPrompt){ a2hsPending = true; return; }   // 発火を待って再試行
+  document.getElementById("a2hsIOS").hidden = !ios;
+  document.getElementById("a2hsInstall").style.display = (!ios && deferredPrompt) ? "block" : "none";
+  document.getElementById("a2hs").hidden = false;
+}
+function hideA2HS(){ const el = document.getElementById("a2hs"); if(el) el.hidden = true; }
+function dismissA2HS(){
+  hideA2HS();
+  state.a2hsSeen = true; saveState();   // 「あとで」でも次回以降は出さない
+}
+async function runInstall(){
+  if(!deferredPrompt) return dismissA2HS();
+  hideA2HS();
+  deferredPrompt.prompt();
+  try{ await deferredPrompt.userChoice; }catch(e){}
+  deferredPrompt = null;
+  state.a2hsSeen = true; saveState();
+}
+
+/* ---------- オンボーディング・ログイン処理 ---------- */
+function finishOnboard(){
+  const name = document.getElementById("obName").value.trim();
+  state.profile.name = name || "ゲスト";
+  touchLogin(); saveState();
+  setSubject(state.subject);
+  navTo("home");
+  // 初回ログイン直後にホーム画面への追加を促す（ホームの描画後に表示）
+  setTimeout(maybeShowA2HS, 900);
+}
+function dateKey(d){ return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); }
+function touchLogin(){
+  const today = dateKey(new Date());
+  if(state.todayKey !== today){ state.todayKey = today; state.pointsToday = 0; }
+  const last = state.profile.lastLogin;
+  if(last !== today){
+    const y = new Date(); y.setDate(y.getDate()-1);
+    state.profile.streak = (last === dateKey(y)) ? (state.profile.streak||0)+1 : 1;
+    state.profile.lastLogin = today;
+  }
+  saveState();
+}
+
+/* ---------- 起動 ---------- */
+(async function init(){
+  await loadQuestions();
+  if(!state.profile.name){ show("scr-onboard"); return; }
+  touchLogin();
+  setSubject(state.subject);
+  syncGradeTabs();
+  navTo("home");
+  setTimeout(maybeShowA2HS, 1200);   // 未案内の既存ユーザーにも1度だけ表示
+})();
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  try{ navigator.serviceWorker.register("sw.js"); }catch(e){}
+}
+
+/* =========================================================
+   内蔵サンプル問題（questions.json が読めないときのフォールバック）
+   本番は同階層の questions.json が優先される
+   ========================================================= */
+const EMBEDDED_QUESTIONS = [
+ {"id":"sci_1_001","subject":"理科","grade":1,"category":"音の性質","difficulty":1,"question":"おんさをたたき、水の入った水槽の水面にふれさせると、水しぶきが上がった。このことから、おんさが何をしていることがわかるか。","choice_1":"振動している","choice_2":"回転している","choice_3":"膨張している","choice_4":"発熱している","explanation":"音を出しているおんさを水につけると水しぶきが上がることから、おんさが振動していることがわかる。指で振動を止めると音は鳴りやむ。","image_url":null},
+ {"id":"sci_1_002","subject":"理科","grade":1,"category":"音の性質","difficulty":1,"question":"たいこやスピーカーなど、振動して音を出すものを何というか。","choice_1":"音源（発音体）","choice_2":"導体","choice_3":"共鳴板","choice_4":"振り子","explanation":"音を出すものを音源（発音体）という。音源はすべて振動している。","image_url":null},
+ {"id":"sci_1_003","subject":"理科","grade":1,"category":"音の性質","difficulty":1,"question":"おんさをたたくと、おんさの振動が何を振動させて、音として耳に伝わるか。","choice_1":"空気","choice_2":"光","choice_3":"糸","choice_4":"地面","explanation":"音源の振動がまわりの空気を振動させ、空気が濃くなったりうすくなったりしながら次々に振動を伝えることで音が伝わる。","image_url":null},
+ {"id":"sci_1_004","subject":"理科","grade":1,"category":"音の性質","difficulty":1,"question":"ピストルの音が離れた走者に届くのは、ピストルのまわりの空気が振動して、何となって広がるからか。","choice_1":"波","choice_2":"電流","choice_3":"熱","choice_4":"風","explanation":"音は空気中を波として広がりながら伝わる。","image_url":null},
+ {"id":"sci_1_005","subject":"理科","grade":1,"category":"音の性質","difficulty":2,"question":"音は、音源となる物体が振動することによって生じる。このように振動が次々と伝わる現象を何というか。","choice_1":"波","choice_2":"対流","choice_3":"反射","choice_4":"放電","explanation":"花火の音で窓ガラスがゆれるのは、空気が振動し、その振動が波として次々に伝わるためである。","image_url":null},
+ {"id":"sci_1_006","subject":"理科","grade":1,"category":"音の性質","difficulty":1,"question":"空気中を伝わってきた音の振動を、耳の中にある何でとらえているか。","choice_1":"鼓膜","choice_2":"水晶体","choice_3":"声帯","choice_4":"三半規管","explanation":"空気の振動が鼓膜を振動させ、その振動が信号に変えられて神経を通って脳に伝わり、「音が聞こえた」と感じ取る。","image_url":null},
+ {"id":"sci_1_007","subject":"理科","grade":1,"category":"音の性質","difficulty":2,"question":"鳴り続けているブザーを密閉したガラス容器に入れ、真空ポンプで容器の中の空気をぬいていくと、聞こえるブザーの音はどうなるか。","choice_1":"小さくなる","choice_2":"大きくなる","choice_3":"高くなる","choice_4":"変わらない","explanation":"音の振動を伝える空気が少なくなるため、音は伝わりにくくなり小さくなる。完全な真空になると音は聞こえなくなる。","image_url":null},
+ {"id":"sci_1_008","subject":"理科","grade":1,"category":"音の性質","difficulty":2,"question":"容器内の空気をぬくとブザーの音が小さくなり、空気を再び入れると音が大きくなった。この実験からわかることは何か。","choice_1":"空気が音を伝えていること","choice_2":"空気が音をさえぎっていること","choice_3":"ブザーが真空中では振動しないこと","choice_4":"音の高さが気圧によって変わること","explanation":"空気の量と音の大きさが対応して変化することから、空気が音（振動）を伝えていることがわかる。","image_url":null},
+ {"id":"sci_1_009","subject":"理科","grade":1,"category":"音の性質","difficulty":2,"question":"真空実験で、ブザーのそばに発泡ポリスチレンの球を置いておくのは、何を確かめるためか。","choice_1":"ブザーが振動しているかどうか","choice_2":"音が聞こえるかどうか","choice_3":"容器の中に空気があるかどうか","choice_4":"容器の温度が変化したかどうか","explanation":"音が聞こえなくなってもブザー自体が振動しているかどうかは、そばに置いた発泡ポリスチレン球の動きで確認できる。","image_url":null},
+ {"id":"sci_1_010","subject":"理科","grade":1,"category":"音の性質","difficulty":2,"question":"同じ高さの音が出るおんさAとBを向かい合わせに置き、Aをたたくと、Bはどうなるか。","choice_1":"鳴りだす","choice_2":"何も変化しない","choice_3":"倒れる","choice_4":"Aより高い音で鳴る","explanation":"Aの振動が空気を振動させ、その振動が空気中を伝わってBのおんさを振動させるため、Bも鳴りだす。","image_url":null},
+ {"id":"sci_1_011","subject":"理科","grade":1,"category":"音の性質","difficulty":2,"question":"向かい合わせたおんさAとBで、Aをたたいた後にAを手でおさえると、Bはどうなるか。","choice_1":"そのまま鳴り続ける","choice_2":"すぐに音が止まる","choice_3":"音が大きくなる","choice_4":"音が高くなる","explanation":"Aの振動を止めてもBはすでに振動を始めているので、Bはそのまま振動を続けて鳴り続ける。","image_url":null},
+ {"id":"sci_1_012","subject":"理科","grade":1,"category":"音の性質","difficulty":3,"question":"向かい合わせたおんさAとBの間に板を入れてAをたたくと、Bはどうなると考えられるか。","choice_1":"板がないときより小さな音が出る","choice_2":"板がないときより大きな音が出る","choice_3":"板がないときと同じ大きさの音が出る","choice_4":"板がないときより高い音が出る","explanation":"板があると空気の振動がさえぎられてBに伝わりにくくなるため、板がない場合より小さな音になる（ほとんど振動しない）。","image_url":null},
+ {"id":"soc_1_001","subject":"社会","grade":1,"category":"アジア州","difficulty":1,"question":"中華人民共和国（中国）の首都はどこか。","choice_1":"ペキン","choice_2":"シャンハイ","choice_3":"ホンコン","choice_4":"ナンキン","explanation":"中国の首都はペキン（北京）。シャンハイは中国最大の経済都市だが首都ではない。","image_url":null},
+ {"id":"soc_1_002","subject":"社会","grade":1,"category":"アジア州","difficulty":1,"question":"インドの首都はどこか。","choice_1":"デリー","choice_2":"ムンバイ","choice_3":"コルカタ","choice_4":"バンコク","explanation":"インドの首都はデリー。バンコクはタイの首都。","image_url":null},
+ {"id":"soc_1_003","subject":"社会","grade":1,"category":"アジア州","difficulty":1,"question":"韓国（大韓民国）の首都はどこか。","choice_1":"ソウル","choice_2":"ピョンヤン","choice_3":"プサン","choice_4":"インチョン","explanation":"韓国の首都はソウル。ピョンヤンは北朝鮮の首都。","image_url":null},
+ {"id":"soc_1_004","subject":"社会","grade":1,"category":"アジア州","difficulty":1,"question":"アジア州の区分のうち、日本・中国・韓国などが含まれる地域を何というか。","choice_1":"東アジア","choice_2":"東南アジア","choice_3":"南アジア","choice_4":"中央アジア","explanation":"アジア州は東アジア・東南アジア・南アジア・西アジア・中央アジアなどに区分され、日本や中国、韓国は東アジアに含まれる。","image_url":null},
+ {"id":"soc_1_005","subject":"社会","grade":1,"category":"アジア州","difficulty":2,"question":"タイやベトナム、インドネシアなどが含まれるアジアの地域区分はどれか。","choice_1":"東南アジア","choice_2":"東アジア","choice_3":"西アジア","choice_4":"中央アジア","explanation":"インドシナ半島や島々の国々（タイ・ベトナム・マレーシア・インドネシアなど）は東南アジアに区分される。","image_url":null},
+ {"id":"soc_1_006","subject":"社会","grade":1,"category":"アジア州","difficulty":2,"question":"赤道が通る場所として正しいものはどれか。","choice_1":"東南アジアのシンガポール付近","choice_2":"中国のペキン付近","choice_3":"インドのデリー付近","choice_4":"日本の沖縄付近","explanation":"赤道は南アメリカ大陸のアマゾン川流域、アフリカ大陸のギニア湾、東南アジアのシンガポール付近を通る。","image_url":null},
+ {"id":"soc_1_007","subject":"社会","grade":1,"category":"アジア州","difficulty":1,"question":"世界最高峰のエベレスト（チョモランマ）を含む、アジアの山脈は何か。","choice_1":"ヒマラヤ山脈","choice_2":"アンデス山脈","choice_3":"ロッキー山脈","choice_4":"アルプス山脈","explanation":"ヒマラヤ山脈はアルプス・ヒマラヤ造山帯に属する高くけわしい山脈で、その北にはチベット高原が広がる。","image_url":null},
+ {"id":"soc_1_008","subject":"社会","grade":1,"category":"アジア州","difficulty":2,"question":"高くけわしい山々がつらなる造山帯では、大地の動きがさかんである。造山帯でしばしば起こる災害はどれか。","choice_1":"地震","choice_2":"干ばつ","choice_3":"竜巻","choice_4":"高潮","explanation":"アジアは環太平洋造山帯とアルプス・ヒマラヤ造山帯が交わる地域で、地震や火山の噴火が多い。","image_url":null},
+ {"id":"soc_1_009","subject":"社会","grade":1,"category":"アジア州","difficulty":1,"question":"ASEAN諸国の米の生産に大きな影響を与えている、季節によって向きが変わる風を何というか。","choice_1":"モンスーン（季節風）","choice_2":"偏西風","choice_3":"貿易風","choice_4":"からっ風","explanation":"アジアの東部・南部では半年ごとに風向きが逆になるモンスーン（季節風）がふき、稲作に大きな影響を与えている。","image_url":null},
+ {"id":"soc_1_010","subject":"社会","grade":1,"category":"アジア州","difficulty":2,"question":"モンスーン（季節風）について正しく説明しているものはどれか。","choice_1":"季節によって向きが変わり、夏は海洋から、冬は大陸から吹く風","choice_2":"1年を通して西から東へ吹く風","choice_3":"台風が発生すると吹く強い風","choice_4":"冷害の原因となる、夏に北東から吹く冷たい風","explanation":"モンスーンは夏に海から陸へ（湿った風→雨季）、冬に陸から海へ（乾いた風→乾季）と、半年ごとに向きが変わる。","image_url":null},
+ {"id":"soc_1_011","subject":"社会","grade":1,"category":"アジア州","difficulty":3,"question":"インドのある地域では雨季に南西の季節風が吹く。この季節風の説明として適切なものはどれか。","choice_1":"南西から北東に向かって吹く風で、乾季には風向きが変わる","choice_2":"南西から北東に向かって吹く風で、風向きは年中一定である","choice_3":"北東から南西に向かって吹く風で、風向きは年中一定である","choice_4":"北東から南西に向かって吹く風で、乾季にも同じ向きに吹く","explanation":"「南西の季節風」は南西から北東へ吹く風。季節風なので、乾季（冬）には逆向き（北東から南西）に変わる。","image_url":null},
+ {"id":"soc_1_012","subject":"社会","grade":1,"category":"アジア州","difficulty":2,"question":"夏にインド洋からの湿った季節風がヒマラヤ山脈にぶつかると、山脈の南側ではどうなるか。","choice_1":"大量の雨が降る","choice_2":"乾燥して砂漠になる","choice_3":"気温が急に下がって雪だけが降る","choice_4":"風がなくなり晴天が続く","explanation":"湿った季節風が山脈にぶつかって上昇すると雲ができ、大量の雨を降らせる。","image_url":null},
+ {"id":"soc_1_013","subject":"社会","grade":1,"category":"アジア州","difficulty":2,"question":"タイの首都バンコクの雨温図は、各月の気温が20℃以上で、雨の多い季節と少ない季節がある。バンコクの気候は何か。","choice_1":"サバナ気候","choice_2":"熱帯雨林気候","choice_3":"地中海性気候","choice_4":"ステップ気候","explanation":"気温が年中高いので熱帯。熱帯のうち、雨季と乾季があるのはサバナ気候（年中多雨なら熱帯雨林気候）。","image_url":null},
+ {"id":"soc_1_014","subject":"社会","grade":1,"category":"アジア州","difficulty":2,"question":"赤道直下にあり、1年を通して気温が高く雨が多いシンガポールの気候は何か。","choice_1":"熱帯雨林気候","choice_2":"サバナ気候","choice_3":"温帯湿潤気候","choice_4":"砂漠気候","explanation":"赤道直下のシンガポールは年中雨の多い熱帯雨林気候。雨季と乾季があるバンコクやコルカタはサバナ気候。","image_url":null},
+ {"id":"soc_1_015","subject":"社会","grade":1,"category":"アジア州","difficulty":3,"question":"バンコクとシンガポールはともに熱帯に属するが、バンコクにあってシンガポールにはあまり見られない特徴はどれか。","choice_1":"降水量が多い雨季と少ない乾季がある","choice_2":"1年を通して気温が低い","choice_3":"冬に雪が降る","choice_4":"1年中ほとんど雨が降らない","explanation":"シンガポール（熱帯雨林気候）は年中多雨だが、バンコク（サバナ気候）には雨季と乾季の区別がある。","image_url":null},
+ {"id":"eng_1_001","subject":"英語","grade":1,"category":"be動詞・一般動詞","difficulty":1,"question":"次の（　）に入る語はどれか。<br>I（　）a junior high school student.","choice_1":"am","choice_2":"is","choice_3":"are","choice_4":"do","explanation":"主語が I のとき、be動詞は am を使う。is は he/she/it など、are は you や複数の主語に使う。","image_url":null},
+ {"id":"eng_1_002","subject":"英語","grade":1,"category":"be動詞・一般動詞","difficulty":1,"question":"次の（　）に入る語はどれか。<br>She（　）tennis every day.","choice_1":"plays","choice_2":"play","choice_3":"playing","choice_4":"is play","explanation":"主語が三人称単数（she）で現在の文なので、一般動詞に s をつけて plays にする（三単現のs）。","image_url":null},
+ {"id":"eng_1_003","subject":"英語","grade":1,"category":"be動詞・一般動詞","difficulty":2,"question":"「あなたは毎朝、朝食を食べますか。」を英語にしたとき、正しいものはどれか。","choice_1":"Do you eat breakfast every morning?","choice_2":"Are you eat breakfast every morning?","choice_3":"You do eat breakfast every morning?","choice_4":"Does you eat breakfast every morning?","explanation":"一般動詞（eat）の疑問文は Do＋主語＋動詞の原形。be動詞（are）と一般動詞は一緒に使わない。","image_url":null},
+];
+</script>
+</body>
+</html>
