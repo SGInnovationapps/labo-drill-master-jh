@@ -19,21 +19,25 @@ const CORE = [
   "favicon.ico",
 ];
 
-/* アバターSVG 全32点（本体10＋頭6＋手6＋仲間5＋背景5） */
+/* アバターSVG 全54点（本体17＋頭10＋手11＋仲間8＋背景8） */
 const AVATAR = [
   "body_face","body_cat","body_rabbit","body_bear","body_panda",
   "body_fox","body_lion","body_tiger","body_owl","body_koala",
+  "body_dragon","body_slime","body_robot","body_ghost","body_dino","body_knight","body_ninja",
 ].map(id => `assets/avatar/body/${id}.svg`).concat(
-  ["head_goggle","head_micro","head_cap","head_grad","head_bulb","head_crown"]
+  ["head_goggle","head_micro","head_cap","head_grad","head_bulb","head_crown",
+   "head_horn","head_kabuto","head_wizard","head_headphone"]
     .map(id => `assets/avatar/head/${id}.svg`),
-  ["hand_flask","hand_tube","hand_magnet","hand_dna","hand_scope","hand_book"]
+  ["hand_flask","hand_tube","hand_magnet","hand_dna","hand_scope","hand_book",
+   "hand_sword","hand_shield","hand_staff","hand_potion","hand_pad"]
     .map(id => `assets/avatar/hand/${id}.svg`),
-  ["pet_ecoli","pet_mouse","pet_frog","pet_cat","pet_water"]
+  ["pet_ecoli","pet_mouse","pet_frog","pet_cat","pet_water",
+   "pet_dragon","pet_slime","pet_ghost"]
     .map(id => `assets/avatar/pet/${id}.svg`),
-  ["bg_lab","bg_cell","bg_mountain","bg_night","bg_space"]
+  ["bg_lab","bg_cell","bg_mountain","bg_night","bg_space",
+   "bg_dungeon","bg_volcano","bg_castle"]
     .map(id => `assets/avatar/bg/${id}.svg`)
 );
-
 self.addEventListener("install", (e) => {
   e.waitUntil(
     caches.open(VERSION).then(async (cache) => {
