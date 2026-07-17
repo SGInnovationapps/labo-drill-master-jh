@@ -333,8 +333,9 @@ nav button.active{color:var(--subj-d)}
     <div class="itemGrid" id="itemGrid"></div>
   </section>
 
-  <nav id="nav">
+ <nav id="nav">
     <button class="active" data-n="home" onclick="navTo('home')"><span class="em">🏠</span>ホーム</button>
+    <button data-n="progress" onclick="navTo('progress')"><span class="em">📈</span>進捗</button>
     <button data-n="avatar" onclick="navTo('avatar')"><span class="em">🧢</span>カスタム</button>
   </nav>
 
@@ -459,12 +460,20 @@ function loadState(){
     if(!s.gradeMax) s.gradeMax = 1;                       // 旧データ移行
     if(!SUBJECTS.includes(s.subject)) s.subject = "理科";
     if(!s.avatar || !s.avatar.equip) s.avatar = defaultAvatar();
+    if(!Array.isArray(state.materials)) state.materials = [];
     return s;
   }catch(e){ return defaultState(); }
-  if(!Array.isArray(state.materials)) state.materials = [];
 }
 function saveState(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
-
+/* ---------- コイン付与（進捗管理用） ---------- */
+function gainCoins(n, msg){
+  state.coins += n;
+  state.pointsToday = (state.pointsToday||0) + n;   // 本日のコインにも計上
+  saveState();
+  const c = document.getElementById("pgCoin"); if(c) c.textContent = state.coins;
+  const h = document.getElementById("hCoin");  if(h) h.textContent = state.coins;
+  if(msg) toast(msg + "　+" + n + " 🪙");
+}
 /* ---------- レベル計算 ---------- */
 function expNeed(lv){ return 100 + (lv-1)*40; }           // Lv→次までの必要EXP
 function levelInfo(exp){
