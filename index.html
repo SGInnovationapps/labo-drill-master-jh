@@ -205,6 +205,29 @@ nav button.active{color:var(--subj-d)}
 #toast{position:fixed; left:50%; bottom:96px; transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff;
   padding:10px 18px; border-radius:8px; font-weight:500; font-size:14px; opacity:0; transition:all .25s; z-index:9; pointer-events:none; white-space:nowrap}
 #toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+/* ---------- 進捗管理 ---------- */
+.pg-card{display:block; width:100%; text-align:left; background:var(--card); border:1px solid var(--line);
+  border-radius:var(--r); box-shadow:var(--shadow); padding:12px 14px; margin-bottom:10px}
+.pg-card:active{background:var(--subj-l)}
+.pg-top{display:flex; align-items:baseline; justify-content:space-between; gap:8px}
+.pg-name{font-weight:700; font-size:15px}
+.pg-badge{flex:none; font-size:11px; font-weight:700; border-radius:8px; padding:2px 8px; white-space:nowrap}
+.pg-badge.ok{color:var(--green-d); background:var(--green-l)}
+.pg-badge.warn{color:var(--orange-d); background:var(--orange-l)}
+.pg-badge.late{color:#fff; background:var(--ng)}
+.pg-badge.done{color:#fff; background:var(--subj)}
+.pg-stats{display:flex; justify-content:space-between; font-size:12px; color:var(--ink-2); margin-top:6px}
+.pg-stats b{color:var(--ink)}
+.pg-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(46px,1fr)); gap:6px; margin:4px 0 16px}
+.pg-cell{aspect-ratio:1; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink-2);
+  font-weight:800; font-size:13px}
+.pg-cell.done{background:var(--subj); border-color:var(--subj); color:#fff}
+.pg-form label{display:block; font-size:12px; font-weight:700; color:var(--ink-2); margin:12px 0 4px}
+.pg-form label:first-child{margin-top:0}
+.pg-form input{width:100%; border:1px solid var(--line); border-radius:10px; padding:11px; font:inherit; font-weight:500; background:var(--paper)}
+.pg-empty{text-align:center; color:var(--ink-2); font-size:13px; padding:36px 0 20px}
+.btn.danger{background:#fff; color:var(--ng); border:1px solid var(--line)}
+.btn + .btn{margin-top:10px}
 </style>
 </head>
 <body>
@@ -332,7 +355,14 @@ nav button.active{color:var(--subj-d)}
     <div class="slotTabs" id="slotTabs"></div>
     <div class="itemGrid" id="itemGrid"></div>
   </section>
-
+<!-- 進捗管理 -->
+  <section class="screen" id="scr-progress">
+    <header>
+      <div class="logo"><b>進捗管理</b><small>STUDY PROGRESS</small></div>
+      <div class="wallet"><span class="chip">🪙 <span id="pgCoin">0</span></span></div>
+    </header>
+    <div id="progressView"></div>
+  </section>
  <nav id="nav">
     <button class="active" data-n="home" onclick="navTo('home')"><span class="em">🏠</span>ホーム</button>
     <button data-n="progress" onclick="navTo('progress')"><span class="em">📈</span>進捗</button>
@@ -510,6 +540,7 @@ function show(id){
 function navTo(where){
   document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("active", b.dataset.n === where));
   if(where === "home"){ show("scr-home"); renderHome(); }
+  else if(where === "progress"){ show("scr-progress"); renderProgress(); }
   else { show("scr-avatar"); renderAvatarScreen(); }
 }
 function toast(msg){
@@ -806,7 +837,172 @@ function unequipItem(id){
   state.avatar.equip[item.slot] = null;
   saveState(); renderAvatarScreen();
 }
+/* =========================================================
+   進捗管理（教材の登録・ページ/単元トグル・コイン・期日）
+   ========================================================= */
+const PG_COIN_PER = 2;     // 1ページ/1単元 完了ごと
+const PG_COIN_BONUS = 30;  // 教材を全て終えたとき（1回のみ）
 
+function pgDaysLeft(deadline){
+  const t = new Date(dateKey(new Date()) + "T00:00:00");
+  const d = new Date(deadline + "T00:00:00");
+  return Math.round((d - t) / 86400000);
+}
+function pgStatus(m){
+  if(m.done.length >= m.total) return {label:"完了", cls:"done"};
+  const left = pgDaysLeft(m.deadline);
+  if(left < 0) return {label:"期日超過", cls:"late"};
+  const start = new Date(m.createdAt + "T00:00:00").getTime();
+  const end   = new Date(m.deadline  + "T00:00:00").getTime();
+  const now   = new Date(dateKey(new Date()) + "T00:00:00").getTime();
+  const timeRate = Math.min(1, Math.max(0, (now - start) / Math.max(1, end - start)));
+  const progRate = m.done.length / m.total;
+  if(progRate >= timeRate)        return {label:"順調", cls:"ok"};
+  if(progRate >= timeRate - 0.15) return {label:"注意", cls:"warn"};
+  return {label:"遅れ", cls:"late"};
+}
+function pgPace(m){
+  const remain = m.total - m.done.length;
+  if(remain <= 0) return null;
+  return Math.ceil(remain / Math.max(1, pgDaysLeft(m.deadline)));
+}
+
+/* 一覧 */
+function renderProgress(){
+  document.getElementById("pgCoin").textContent = state.coins;
+  const v = document.getElementById("progressView");
+  let h = "";
+  if(!state.materials.length){
+    h += '<div class="pg-empty">登録された教材はありません。<br>「教材を追加」から始めましょう。</div>';
+  }
+  state.materials.forEach(m => {
+    const st = pgStatus(m);
+    const pct = Math.round(m.done.length / m.total * 100);
+    const left = pgDaysLeft(m.deadline);
+    const leftTxt = left < 0 ? "期日を" + (-left) + "日超過" : left === 0 ? "本日が期日" : "残り" + left + "日";
+    const pace = pgPace(m);
+    h += '<button class="pg-card" onclick="pgOpen(\'' + m.id + '\')">' +
+      '<div class="pg-top"><span class="pg-name">' + esc(m.name) + '</span>' +
+        '<span class="pg-badge ' + st.cls + '">' + st.label + '</span></div>' +
+      '<div class="hint" style="margin-top:2px">期日 ' + m.deadline.replace(/-/g,"/") + '（' + leftTxt + '）</div>' +
+      '<div class="mBar" style="margin-top:8px"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="pg-stats"><span><b>' + m.done.length + '</b> / ' + m.total + ' ' + m.unitType + '（' + pct + '%）</span>' +
+        '<span>' + (pace !== null ? '1日 <b>' + pace + '</b> ' + m.unitType : 'おつかれさま') + '</span></div>' +
+      '</button>';
+  });
+  h += '<button class="btn ghost" onclick="renderProgressForm()">＋ 教材を追加</button>';
+  v.innerHTML = h;
+}
+
+/* 追加フォーム */
+let pgUnit = "ページ";
+function renderProgressForm(){
+  pgUnit = "ページ";
+  const min = dateKey(new Date());
+  document.getElementById("progressView").innerHTML =
+    '<div class="pageTitle"><button class="backBtn" onclick="renderProgress()">←</button><b>教材を追加</b></div>' +
+    '<div class="card pg-form">' +
+      '<label>教材名</label>' +
+      '<input type="text" id="pgName" maxlength="30" placeholder="例：理科ワーク 3年">' +
+      '<label>数え方</label>' +
+      '<div class="gradetabs" id="pgUnitSeg" style="margin-top:0">' +
+        '<button type="button" class="gradetab active" onclick="pgSetUnit(\'ページ\')">ページ</button>' +
+        '<button type="button" class="gradetab" onclick="pgSetUnit(\'単元\')">単元</button>' +
+      '</div>' +
+      '<label>合計数（1〜300）</label>' +
+      '<input type="number" id="pgTotal" min="1" max="300" inputmode="numeric" placeholder="例：120">' +
+      '<label>期日</label>' +
+      '<input type="date" id="pgDeadline" min="' + min + '">' +
+    '</div>' +
+    '<button class="btn" onclick="pgAdd()">登録する</button>' +
+    '<button class="btn ghost" onclick="renderProgress()">もどる</button>';
+}
+function pgSetUnit(u){
+  pgUnit = u;
+  document.querySelectorAll("#pgUnitSeg .gradetab").forEach(b => b.classList.toggle("active", b.textContent === u));
+}
+function pgAdd(){
+  const name  = document.getElementById("pgName").value.trim();
+  const total = parseInt(document.getElementById("pgTotal").value, 10);
+  const dl    = document.getElementById("pgDeadline").value;
+  const today = dateKey(new Date());
+  if(!name)                          return toast("教材名を入力してください");
+  if(!(total >= 1 && total <= 300))  return toast("合計数は1〜300で入力してください");
+  if(!dl || dl < today)              return toast("期日は本日以降にしてください");
+  state.materials.push({
+    id:"m_" + Date.now(), name, unitType:pgUnit, total,
+    deadline:dl, createdAt:today, done:[], rewarded:[], bonusGiven:false
+  });
+  saveState();
+  renderProgress();
+  toast("教材を登録しました");
+}
+
+/* 詳細（トグル） */
+function pgOpen(id){
+  const m = state.materials.find(x => x.id === id);
+  if(!m) return renderProgress();
+  const st = pgStatus(m);
+  const pct = Math.round(m.done.length / m.total * 100);
+  const pace = pgPace(m);
+  let cells = "";
+  for(let i = 0; i < m.total; i++){
+    cells += '<button class="pg-cell' + (m.done.includes(i) ? " done" : "") +
+             '" onclick="pgToggle(\'' + m.id + '\',' + i + ')">' + (i + 1) + '</button>';
+  }
+  document.getElementById("progressView").innerHTML =
+    '<div class="pageTitle"><button class="backBtn" onclick="renderProgress()">←</button><b>' + esc(m.name) + '</b></div>' +
+    '<div class="card">' +
+      '<div class="pg-top"><span class="pg-name">進行状況</span><span class="pg-badge ' + st.cls + '">' + st.label + '</span></div>' +
+      '<div class="mBar" style="margin-top:8px"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="pg-stats"><span><b>' + m.done.length + '</b> / ' + m.total + ' ' + m.unitType + '（' + pct + '%）</span>' +
+        '<span>' + (pace !== null ? '1日 <b>' + pace + '</b> ' + m.unitType : 'おつかれさま') + '</span></div>' +
+      '<div class="hint" style="margin-top:8px">期日 <input type="date" value="' + m.deadline + '" min="' + m.createdAt + '"' +
+        ' onchange="pgEditDeadline(\'' + m.id + '\', this.value)"' +
+        ' style="border:1px solid var(--line); border-radius:8px; padding:3px 7px; font:inherit; font-size:12px"></div>' +
+    '</div>' +
+    '<p class="hint">終わった' + m.unitType + 'をタップして完了に。初回完了で +' + PG_COIN_PER +
+      ' 🪙、全' + m.unitType + '達成で +' + PG_COIN_BONUS + ' 🪙。</p>' +
+    '<div class="pg-grid">' + cells + '</div>' +
+    '<button class="btn ghost" onclick="renderProgress()">もどる</button>' +
+    '<button class="btn danger" onclick="pgDelete(\'' + m.id + '\')">この教材を削除</button>';
+}
+function pgToggle(id, idx){
+  const m = state.materials.find(x => x.id === id);
+  if(!m) return;
+  const pos = m.done.indexOf(idx);
+  if(pos >= 0){
+    m.done.splice(pos, 1);               // 完了→未完了（コインは戻さない）
+    saveState();
+  }else{
+    m.done.push(idx);
+    if(!m.rewarded.includes(idx)){       // このマス初回のみ付与
+      m.rewarded.push(idx);
+      gainCoins(PG_COIN_PER, (idx + 1) + (m.unitType === "ページ" ? "ページ目 完了" : "つ目 完了"));
+    }else{
+      saveState();
+    }
+    if(m.done.length >= m.total && !m.bonusGiven){
+      m.bonusGiven = true;
+      gainCoins(PG_COIN_BONUS, "「" + m.name + "」達成！");
+    }
+  }
+  pgOpen(id);
+}
+function pgEditDeadline(id, val){
+  const m = state.materials.find(x => x.id === id);
+  if(!m || !val) return;
+  m.deadline = val; saveState();
+  pgOpen(id); toast("期日を変更しました");
+}
+function pgDelete(id){
+  const m = state.materials.find(x => x.id === id);
+  if(!m) return;
+  if(!confirm("「" + m.name + "」を削除します。よろしいですか？")) return;
+  state.materials = state.materials.filter(x => x.id !== id);
+  saveState(); renderProgress();
+}
+  
 /* ---------- ホーム画面に追加：表示制御 ---------- */
 function isStandalone(){
   return window.matchMedia("(display-mode: standalone)").matches ||
