@@ -447,6 +447,7 @@ function defaultState(){
     gradeMax:1,          // ★学年上限（1/2/3）
     a2hsSeen:false,      // ホーム画面に追加の案内を表示済みか
     avatar:defaultAvatar(),
+    materials:[]          // ★進捗管理：登録教材の配列
   };
 }
 let state = loadState();
@@ -460,6 +461,7 @@ function loadState(){
     if(!s.avatar || !s.avatar.equip) s.avatar = defaultAvatar();
     return s;
   }catch(e){ return defaultState(); }
+  if(!Array.isArray(state.materials)) state.materials = [];
 }
 function saveState(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
 
