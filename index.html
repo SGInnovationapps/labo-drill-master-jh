@@ -518,7 +518,7 @@ function loadState(){
     if(!s.gradeMax) s.gradeMax = 1;                       // 旧データ移行
     if(!SUBJECTS.includes(s.subject)) s.subject = "理科";
     if(!s.avatar || !s.avatar.equip) s.avatar = defaultAvatar();
-    if(!Array.isArray(state.materials)) state.materials = [];
+    if(!Array.isArray(state.materials)) s.materials = [];
     return s;
   }catch(e){ return defaultState(); }
 }
