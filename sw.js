@@ -1,7 +1,7 @@
 /* ラボドリ オンライン／高校受験対策 Service Worker
    更新のたびに VERSION を上げる（juken-v2, v3...）。
    localStorage の学習データは VERSION 更新でも消えない。 */
-const VERSION = "juken-v1";
+const VERSION = "juken-v2";
 
 const CORE = [
   "./",
